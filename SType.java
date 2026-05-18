@@ -1,0 +1,1 @@
+public enum SType { ENVIRONMENTAL, SOIL, BIOMETRIC, GPS, WATER }

@@ -1,0 +1,1 @@
+public enum GrowthStatus { SOWING, GERMINATION, GROWTH, MATURITY, HARVEST }

@@ -1,0 +1,315 @@
+@startuml
+!theme plain
+skinparam classAttributeIconSize 0
+
+' ====== Enums ======
+enum StatusZone {
+  ACTIVE
+  SUSPENDED
+}
+enum HealthStatus {
+  HEALTHY
+  SICK
+  QUARANTINED
+}
+enum Family {
+  RUMINANT
+  POULTRY
+}
+enum CropFamily {
+  CEREAL
+  VEGETABLE
+  FRUIT
+}
+enum GrowthStatus {
+  SOWING
+  GERMINATION
+  GROWTH
+  MATURITY
+  HARVEST
+}
+enum StatusSensor {
+  ACTIVE
+  FAULTY
+  SUSPENDED
+}
+enum SType {
+  ENVIRONMENTAL
+  SOIL
+  BIOMETRIC
+  GPS
+  WATER
+}
+enum ReadingStatus {
+  NORMAL
+  WARNING
+  CRITICAL
+}
+enum SeverityLevel {
+  WARNING
+  CRITICAL
+}
+
+' ====== Interfaces ======
+interface FeedingProgram {
+  +String getFeedType()
+  +double getQuantityPerMeal()
+  +String getSchedule()
+}
+interface Range {
+  +double getMin()
+  +double getMax()
+  +boolean isInRange(double value)
+}
+
+' ====== Data/Entity Classes ======
+class Tank {
+  -String id
+  -double capacity
+  +String getId()
+  +double getCapacity()
+}
+class Crop {
+  -String name
+  -CropFamily cropFamily
+  -Date plantingDate
+  -Date harvestDate
+  -GrowthStatus growthStatus
+  -double optimalPHMin
+  -double optimalPHMax
+  -double optimalMoistureMin
+  -double optimalMoistureMax
+  +void updateGrowthStage(GrowthStatus g)
+  +GrowthStatus getGrowthStatus()
+  +String getName()
+}
+class Animal {
+  -String id
+  -String species
+  -int age
+  -double weight
+  -HealthStatus healthStatus
+  -Family family
+  +void updateWeight(double w)
+  +void logIllness(String desc)
+  +HealthStatus getHealthStatus()
+  +String getId()
+  +void setId(String id)
+  +void setHealthStatus(HealthStatus hs)
+  +void setFamily(Family family)
+  +Family getFamily()
+  +String getSpecies()
+  +void setSpecies(String species)
+}
+class AquaAnimal {
+  -String species
+  -int count
+  +String getSpecies()
+  +int getCount()
+}
+
+' ====== Zone Hierarchy ======
+abstract class Zone {
+  -String code
+  -String name
+  -StatusZone status
+  -List<Sensor> sensors
+  +void suspend()
+  +void reactivate()
+  +void addSensor(Sensor s)
+  +List<Sensor> getSensors()
+  +{abstract} void recordProduction()
+}
+class CropZone {
+  -List<Crop> crops
+  -double cropYield
+  +void addCrop(Crop c)
+  +List<Crop> getCrops()
+  +String generateStatusReport()
+  +void recordProduction()
+}
+abstract class LivestockZone {
+  -List<Animal> animals
+  +void addAnimal(Animal a)
+  +List<Animal> getAnimals()
+  +FeedingProgram getFeedingProgram()
+}
+class RuminantZone {
+  -double milkYield
+  +double getMilkYield()
+  +void recordProduction()
+  +String getFeedType()
+  +double getQuantityPerMeal()
+  +String getSchedule()
+  +void addAnimal(Animal a)
+}
+class PoultryZone {
+  -int eggCount
+  +int getEggCount()
+  +void recordProduction()
+  +String getFeedType()
+  +double getQuantityPerMeal()
+  +String getSchedule()
+  +void addAnimal(Animal a)
+}
+class AquacultureZone {
+  -Tank tank
+  -int animalCount
+  -String species
+  -double harvestWeight
+  +Tank getTank()
+  +void recordProduction()
+  +String getFeedType()
+  +double getQuantityPerMeal()
+  +String getSchedule()
+}
+
+' ====== Sensor Hierarchy ======
+abstract class Sensor {
+  -String code
+  -StatusSensor status
+  -SType sensorType
+  -Zone zone
+  -Range thresholdRange
+  +void activate()
+  +void suspend()
+  +void setFaulty()
+  +String getCode()
+  +StatusSensor getStatus()
+  +{abstract} Reading sendReading()
+  +double getMin()
+  +double getMax()
+  +boolean isInRange(double value)
+}
+class EnvironmentSensor {
+  +Reading sendReading()
+}
+class SoilSensor {
+  +Reading sendReading()
+}
+class BiometricSensor {
+  +Reading sendReading()
+}
+class WaterSensor {
+  +Reading sendReading()
+}
+class GPSCollar {
+  -Animal animal
+  +Animal getAnimal()
+  +Reading sendReading()
+}
+
+' ====== Reading Hierarchy ======
+abstract class Reading {
+  -String id
+  -Date timestamp
+  -Sensor sensor
+  -ReadingStatus readingStatus
+  +String getId()
+  +Date getTimestamp()
+  +Sensor getSensor()
+  +boolean checkThreshold()
+  +Alert generateAlert()
+  +ReadingStatus getReadingStatus()
+}
+class NumericalReading {
+  -double value
+  -String unit
+  +double getValue()
+  +String getUnit()
+}
+class GPSReading {
+  -double latitude
+  -double longitude
+  +double getLatitude()
+  +double getLongitude()
+  +boolean isOutOfZone(Zone z)
+}
+
+' ====== Alert Hierarchy ======
+abstract class Alert {
+  -String id
+  -Date triggeredAt
+  -SeverityLevel severity
+  -Reading triggerReading
+  -boolean acknowledged
+  +void acknowledge()
+  +void dismiss()
+  +SeverityLevel getSeverity()
+  +Reading getTriggerReading()
+  +boolean isAcknowledged()
+}
+class ThresholdAlert {
+  +double getExceededValue()
+  +Range getThresholdRange()
+}
+class GPSAlert {
+  +Animal getAnimal()
+  +GPSReading getLastKnownPosition()
+}
+
+class Report {
+  +{static} String generateZoneOverview(List<Zone> systemZones)
+  +{static} String generateCropStatusReport(CropZone cropZone)
+  +{static} String generateZoneProductionAndSensorReport(Zone zone)
+  +{static} String generateAlertHistoryReport(List<Alert> alertHistory)
+}
+
+' ====== Relationships & Inheritance ======
+
+' Inheritances
+Zone <|-- CropZone
+Zone <|-- LivestockZone
+Zone <|-- AquacultureZone
+
+LivestockZone <|-- RuminantZone
+LivestockZone <|-- PoultryZone
+
+Animal <|-- AquaAnimal
+
+Sensor <|-- EnvironmentSensor
+Sensor <|-- SoilSensor
+Sensor <|-- BiometricSensor
+Sensor <|-- WaterSensor
+Sensor <|-- GPSCollar
+
+Reading <|-- NumericalReading
+Reading <|-- GPSReading
+
+Alert <|-- ThresholdAlert
+Alert <|-- GPSAlert
+
+' Implementations
+FeedingProgram <|.. LivestockZone
+FeedingProgram <|.. AquacultureZone
+Range <|.. Sensor
+
+' Unified Aggregation / Usage (-->)
+Zone ..> StatusZone
+CropZone ..> Crop
+LivestockZone ..> Animal
+AquacultureZone ..> Tank
+Tank..> AquaAnimal  : "uses"
+
+Sensor ..> StatusSensor
+Sensor ..> SType
+Sensor ..> Zone
+Sensor ..> Range
+GPSCollar ..> Animal
+
+Reading ..> Sensor
+Reading ..> ReadingStatus
+
+Alert ..> SeverityLevel
+Alert ..> Reading
+
+Crop ..> CropFamily
+Crop ..> GrowthStatus
+Animal ..> HealthStatus
+Animal ..> Family
+
+Report ..> Zone : "uses"
+Report ..> CropZone : "uses"
+Report ..> Alert : "uses"
+
+@enduml
